@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Virtual environments
+venv/
+env/
+.env
+
+# Large datasets and extracted embedding tensors (generated via data_prep.py and extract_embeddings.py)
+data/*.csv
+data/*.jsonl
+data/*.pt
+
+# Large multi-experiment checkpoints (keep the best model weights: model_b_gru.pth)
+experiments_output/*.pth
+!experiments_output/B1_Baseline.pth

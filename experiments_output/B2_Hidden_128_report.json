@@ -1,0 +1,78 @@
+{
+  "model_config": {
+    "embedding_dim": 768,
+    "hidden_size": 128,
+    "num_layers": 1,
+    "mlp_hidden": 128,
+    "dropout": 0.3
+  },
+  "checkpoint_epoch": 6,
+  "metrics": {
+    "accuracy": 0.995,
+    "precision": 0.995,
+    "recall": 0.995,
+    "f1": 0.995,
+    "roc_auc": 0.99905
+  },
+  "confusion_matrix": [
+    [
+      199,
+      1
+    ],
+    [
+      1,
+      199
+    ]
+  ],
+  "generator_breakdown": {
+    "GPT_4-o": {
+      "count": 36,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9978343430492613,
+      "predicted_ai_count": 36,
+      "predicted_human_count": 0
+    },
+    "gemma-2-9b": {
+      "count": 27,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9999921101110952,
+      "predicted_ai_count": 27,
+      "predicted_human_count": 0
+    },
+    "human": {
+      "count": 200,
+      "accuracy": 0.995,
+      "avg_ai_prob": 0.0061752333542972335,
+      "predicted_ai_count": 1,
+      "predicted_human_count": 199
+    },
+    "llama-8B": {
+      "count": 32,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9999951086938381,
+      "predicted_ai_count": 32,
+      "predicted_human_count": 0
+    },
+    "mistral-7B": {
+      "count": 43,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9999975132387738,
+      "predicted_ai_count": 43,
+      "predicted_human_count": 0
+    },
+    "qwen-2-72B": {
+      "count": 23,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9999955737072489,
+      "predicted_ai_count": 23,
+      "predicted_human_count": 0
+    },
+    "yi-large": {
+      "count": 39,
+      "accuracy": 0.9743589743589743,
+      "avg_ai_prob": 0.9743787090186603,
+      "predicted_ai_count": 38,
+      "predicted_human_count": 1
+    }
+  }
+}
