@@ -1,0 +1,80 @@
+{
+  "model_type": "model_c",
+  "model_display_name": "Model C (CCRM Cognitive Memory + GRU + MLP)",
+  "model_config": {
+    "embedding_dim": 768,
+    "hidden_size": 256,
+    "mlp_hidden": 128,
+    "cognitive_dropout": 0.2,
+    "classifier_dropout": 0.3
+  },
+  "checkpoint_epoch": 3,
+  "metrics": {
+    "accuracy": 0.9975,
+    "precision": 1.0,
+    "recall": 0.995,
+    "f1": 0.9974937343358395,
+    "roc_auc": 0.9990249999999999
+  },
+  "confusion_matrix": [
+    [
+      200,
+      0
+    ],
+    [
+      1,
+      199
+    ]
+  ],
+  "generator_breakdown": {
+    "GPT_4-o": {
+      "count": 36,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9734094523721271,
+      "predicted_ai_count": 36,
+      "predicted_human_count": 0
+    },
+    "gemma-2-9b": {
+      "count": 27,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9982390205065409,
+      "predicted_ai_count": 27,
+      "predicted_human_count": 0
+    },
+    "human": {
+      "count": 200,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.00640980285970727,
+      "predicted_ai_count": 0,
+      "predicted_human_count": 200
+    },
+    "llama-8B": {
+      "count": 32,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9957071095705032,
+      "predicted_ai_count": 32,
+      "predicted_human_count": 0
+    },
+    "mistral-7B": {
+      "count": 43,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9990813773731853,
+      "predicted_ai_count": 43,
+      "predicted_human_count": 0
+    },
+    "qwen-2-72B": {
+      "count": 23,
+      "accuracy": 1.0,
+      "avg_ai_prob": 0.9990605323211007,
+      "predicted_ai_count": 23,
+      "predicted_human_count": 0
+    },
+    "yi-large": {
+      "count": 39,
+      "accuracy": 0.9743589743589743,
+      "avg_ai_prob": 0.9727958811876866,
+      "predicted_ai_count": 38,
+      "predicted_human_count": 1
+    }
+  }
+}

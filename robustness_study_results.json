@@ -1,0 +1,41 @@
+[
+  {
+    "Scenario": "Intact Coherent Text",
+    "Model B Acc (%)": 99.75,
+    "Model C Acc (%)": 99.75,
+    "Model B F1 (%)": 99.75,
+    "Model C F1 (%)": 99.75,
+    "Model B AUC": 0.9975,
+    "Model C AUC": 0.999,
+    "B Human P(AI)": 0.44,
+    "C Human P(AI)": 0.64,
+    "B AI P(AI)": 98.76,
+    "C AI P(AI)": 98.87
+  },
+  {
+    "Scenario": "Disrupted / Shuffled Paragraphs",
+    "Model B Acc (%)": 99.75,
+    "Model C Acc (%)": 99.5,
+    "Model B F1 (%)": 99.75,
+    "Model C F1 (%)": 99.5,
+    "Model B AUC": 0.998,
+    "Model C AUC": 0.9994,
+    "B Human P(AI)": 0.53,
+    "C Human P(AI)": 0.66,
+    "B AI P(AI)": 98.73,
+    "C AI P(AI)": 98.41
+  },
+  {
+    "Scenario": "Reversed Discourse Flow",
+    "Model B Acc (%)": 99.75,
+    "Model C Acc (%)": 99.75,
+    "Model B F1 (%)": 99.75,
+    "Model C F1 (%)": 99.75,
+    "Model B AUC": 0.9978,
+    "Model C AUC": 0.999,
+    "B Human P(AI)": 0.51,
+    "C Human P(AI)": 0.68,
+    "B AI P(AI)": 98.65,
+    "C AI P(AI)": 98.09
+  }
+]

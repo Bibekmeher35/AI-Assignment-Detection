@@ -1,0 +1,34 @@
+[
+  {
+    "Model": "Model B (Baseline)",
+    "Architecture Description": "Model B (GRU + MLP)",
+    "Trainable Params": 821122,
+    "Checkpoint Size (MB)": 3.18,
+    "Accuracy (%)": 99.75,
+    "Precision (%)": 100.0,
+    "Recall (%)": 99.5,
+    "F1-Score (%)": 99.75,
+    "ROC-AUC": 0.9975,
+    "Inference Latency (ms/doc)": 0.35,
+    "TN (Human Correct)": 200,
+    "FP (False Alarm)": 0,
+    "FN (Missed AI)": 1,
+    "TP (AI Caught)": 199
+  },
+  {
+    "Model": "Model C (Proposed CCRM)",
+    "Architecture Description": "Model C (CCRM + GRU + MLP)",
+    "Trainable Params": 1609346,
+    "Checkpoint Size (MB)": 6.19,
+    "Accuracy (%)": 99.75,
+    "Precision (%)": 100.0,
+    "Recall (%)": 99.5,
+    "F1-Score (%)": 99.75,
+    "ROC-AUC": 0.999,
+    "Inference Latency (ms/doc)": 0.38,
+    "TN (Human Correct)": 200,
+    "FP (False Alarm)": 0,
+    "FN (Missed AI)": 1,
+    "TP (AI Caught)": 199
+  }
+]

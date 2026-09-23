@@ -1,0 +1,86 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 0.19186623099260033,
+    "train_acc": 0.925,
+    "train_f1": 0.9253731343283582,
+    "val_loss": 0.026351025033121308,
+    "val_acc": 0.9933333333333333,
+    "val_precision": 1.0,
+    "val_recall": 0.9866666666666667,
+    "val_f1": 0.9932885906040269,
+    "val_roc_auc": 0.9998666666666667
+  },
+  {
+    "epoch": 2,
+    "train_loss": 0.07228851407455901,
+    "train_acc": 0.9833333333333333,
+    "train_f1": 0.983249581239531,
+    "val_loss": 0.03418419709118704,
+    "val_acc": 0.99,
+    "val_precision": 0.9867549668874173,
+    "val_recall": 0.9933333333333333,
+    "val_f1": 0.9900332225913622,
+    "val_roc_auc": 0.9997333333333333
+  },
+  {
+    "epoch": 3,
+    "train_loss": 0.05903453970327974,
+    "train_acc": 0.9875,
+    "train_f1": 0.9874266554903605,
+    "val_loss": 0.009717339628065626,
+    "val_acc": 1.0,
+    "val_precision": 1.0,
+    "val_recall": 1.0,
+    "val_f1": 1.0,
+    "val_roc_auc": 1.0
+  },
+  {
+    "epoch": 4,
+    "train_loss": 0.010043750055289517,
+    "train_acc": 0.995,
+    "train_f1": 0.9950083194675541,
+    "val_loss": 0.002136922086647246,
+    "val_acc": 1.0,
+    "val_precision": 1.0,
+    "val_recall": 1.0,
+    "val_f1": 1.0,
+    "val_roc_auc": 1.0
+  },
+  {
+    "epoch": 5,
+    "train_loss": 0.05872037282019543,
+    "train_acc": 0.9833333333333333,
+    "train_f1": 0.9834162520729685,
+    "val_loss": 0.0018562794756144284,
+    "val_acc": 1.0,
+    "val_precision": 1.0,
+    "val_recall": 1.0,
+    "val_f1": 1.0,
+    "val_roc_auc": 1.0
+  },
+  {
+    "epoch": 6,
+    "train_loss": 0.015539579991794502,
+    "train_acc": 0.9966666666666667,
+    "train_f1": 0.9966722129783694,
+    "val_loss": 0.0007374989072559401,
+    "val_acc": 1.0,
+    "val_precision": 1.0,
+    "val_recall": 1.0,
+    "val_f1": 1.0,
+    "val_roc_auc": 1.0
+  },
+  {
+    "epoch": 7,
+    "train_loss": 0.0033363850211996274,
+    "train_acc": 0.9983333333333333,
+    "train_f1": 0.9983333333333333,
+    "val_loss": 0.0007327567545386653,
+    "val_acc": 1.0,
+    "val_precision": 1.0,
+    "val_recall": 1.0,
+    "val_f1": 1.0,
+    "val_roc_auc": 1.0
+  }
+]
