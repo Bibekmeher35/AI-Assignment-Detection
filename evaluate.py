@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 evaluate.py
-Evaluation suite for Model B (DeBERTa + GRU + MLP).
+Evaluation suite for Model C (DeBERTa + CCRM + GRU + MLP) & Model B baseline.
 Computes Accuracy, Precision, Recall, F1, ROC-AUC, Confusion Matrix, and Generator-specific Breakdown.
 """
 
@@ -20,7 +20,7 @@ from sklearn.metrics import (
     confusion_matrix,
     classification_report
 )
-from model import ModelB_GRU
+from model import ModelC_CCRM, ModelB_GRU
 from train import ParagraphEmbeddingDataset, collate_variable_sequences, get_device
 
 
@@ -34,18 +34,30 @@ def evaluate_test_set(
     print(f"Loading checkpoint from {checkpoint_path}...")
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     config = checkpoint.get('config', {})
+    model_type = checkpoint.get('model_type', 'model_c' if 'cognitive_dropout' in config else 'model_b')
 
-    model = ModelB_GRU(
-        embedding_dim=config.get('embedding_dim', 768),
-        hidden_size=config.get('hidden_size', 256),
-        num_layers=config.get('num_layers', 1),
-        mlp_hidden=config.get('mlp_hidden', 128),
-        dropout=config.get('dropout', 0.3)
-    ).to(device)
+    if model_type == "model_c":
+        model = ModelC_CCRM(
+            embedding_dim=config.get('embedding_dim', 768),
+            hidden_size=config.get('hidden_size', 256),
+            mlp_hidden=config.get('mlp_hidden', 128),
+            cognitive_dropout=config.get('cognitive_dropout', 0.2),
+            classifier_dropout=config.get('classifier_dropout', 0.3)
+        ).to(device)
+        model_display_name = "Model C (CCRM Cognitive Memory + GRU + MLP)"
+    else:
+        model = ModelB_GRU(
+            embedding_dim=config.get('embedding_dim', 768),
+            hidden_size=config.get('hidden_size', 256),
+            num_layers=config.get('num_layers', 1),
+            mlp_hidden=config.get('mlp_hidden', 128),
+            dropout=config.get('dropout', 0.3)
+        ).to(device)
+        model_display_name = "Model B (Baseline GRU Memory + MLP)"
 
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
-    print(f"Model loaded successfully. Config: {config}")
+    print(f"Loaded {model_display_name} successfully. Config: {config}")
 
     test_dataset = ParagraphEmbeddingDataset(test_pt)
     test_loader = DataLoader(
@@ -91,9 +103,9 @@ def evaluate_test_set(
 
     cm = confusion_matrix(all_targets, all_preds).tolist()
 
-    print("\n" + "="*60)
-    print("                MODEL B EVALUATION RESULTS")
-    print("="*60)
+    print("\n" + "="*65)
+    print(f"       EVALUATION RESULTS: {model_display_name.upper()}")
+    print("="*65)
     print(f"Test Set Size : {len(all_targets)} documents")
     print(f"Accuracy      : {acc*100:.2f}%")
     print(f"Precision     : {precision*100:.2f}%")
@@ -103,7 +115,7 @@ def evaluate_test_set(
     print("\nConfusion Matrix (Rows=True, Cols=Pred):")
     print(f"   [Human (TN): {cm[0][0]:>5}, AI (FP): {cm[0][1]:>5}]")
     print(f"   [Human (FN): {cm[1][0]:>5}, AI (TP): {cm[1][1]:>5}]")
-    print("="*60)
+    print("="*65)
 
     # Per-Generator Breakdown
     df_eval = pd.DataFrame({
@@ -128,6 +140,8 @@ def evaluate_test_set(
         print(f"  • {gen:<25} (N={len(group):>4}): Acc={g_acc*100:>6.2f}% | Avg P(AI)={group['prob'].mean():.4f}")
 
     results = {
+        'model_type': model_type,
+        'model_display_name': model_display_name,
         'model_config': config,
         'checkpoint_epoch': checkpoint.get('epoch', None),
         'metrics': {
@@ -150,10 +164,10 @@ def evaluate_test_set(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate Model B on Test Set")
-    parser.add_argument("--checkpoint", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model/model_b_gru.pth")
-    parser.add_argument("--test_pt", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model/data/test_embeddings.pt")
-    parser.add_argument("--output_report", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model/test_evaluation_report.json")
+    parser = argparse.ArgumentParser(description="Evaluate Model C / Model B on Test Set")
+    parser.add_argument("--checkpoint", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model C/model_c_ccrm.pth")
+    parser.add_argument("--test_pt", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model C/data/test_embeddings.pt")
+    parser.add_argument("--output_report", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model C/test_evaluation_report_model_c.json")
     args = parser.parse_args()
 
     evaluate_test_set(args.checkpoint, args.test_pt, args.output_report)
