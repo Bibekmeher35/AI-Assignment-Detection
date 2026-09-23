@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
 """
 step_by_step_demo.py
-Interactive Step-by-Step Pipeline Demonstration for Model B.
+Interactive Step-by-Step Pipeline Demonstration for Model C (Proposed CCRM).
 Displays the exact data, tensor shapes, and state transitions at each stage:
   1. Document Processing & Paragraph Extraction (P1, P2, P3, ...)
-  2. Tokenization & Attention Masks
+  2. Tokenization & Input Formatting
   3. DeBERTa-v3 Semantic Paragraph Embeddings (E1, E2, E3, ...) [768-D]
-  4. Step-by-step Sequential GRU Memory Updates (M1, M2, ..., Mn) [256-D]
-  5. Final Memory Vector (Mn)
-  6. MLP Classification Layers (Linear -> ReLU -> Dropout -> Linear)
+  4. Step-by-Step Cognitive Operation (CCRM):
+     - Projections: E_i' and M_(i-1)' in R^256
+     - Relationship Features: diff, interaction, concatenation R_i in R^1024
+     - Cognitive Vector C_i in R^256
+     - Combined Modulated Input in R^768
+     - Recurrent Memory Update M_i in R^256
+  5. Final Document Memory Vector (Mn in R^256)
+  6. MLP Classification Head
   7. Final Softmax Probability & Classification (Human vs AI)
 """
 
 import os
 import argparse
 import torch
-import torch.nn as nn
 from transformers import AutoTokenizer, AutoModel
-from model import ModelB_GRU, masked_mean_pooling
+from model import ModelC_CCRM, masked_mean_pooling
 from data_prep import extract_paragraphs
 from train import get_device
 
@@ -31,7 +35,7 @@ def print_banner(title: str, step_num: int):
 def run_step_by_step_demo(
     input_text: str = None,
     file_path: str = None,
-    checkpoint_path: str = "model_b_gru.pth",
+    checkpoint_path: str = "model_c_ccrm.pth",
     model_name: str = "microsoft/deberta-v3-base"
 ):
     device = get_device()
@@ -45,8 +49,7 @@ def run_step_by_step_demo(
     elif input_text:
         raw_text = input_text
     else:
-        # Default sample text
-        default_file = "/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model/sample_essay.txt"
+        default_file = "/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model C/sample_essay.txt"
         if os.path.exists(default_file):
             with open(default_file, 'r', encoding='utf-8') as f:
                 raw_text = f.read()
@@ -62,7 +65,7 @@ def run_step_by_step_demo(
     # =========================================================================
     print_banner("Document Processing & Paragraph Segmentation", 1)
     print(f"Raw Document Length: {len(raw_text)} characters")
-    
+
     paragraphs = extract_paragraphs(raw_text)
     print(f"Extracted {len(paragraphs)} Paragraphs:\n")
     for idx, p in enumerate(paragraphs, 1):
@@ -86,7 +89,7 @@ def run_step_by_step_demo(
 
     print(f"Input IDs Tensor Shape       : {list(encoded['input_ids'].shape)}  ([num_paras, max_tokens])")
     print(f"Attention Mask Tensor Shape  : {list(encoded['attention_mask'].shape)}")
-    
+
     for idx in range(len(paragraphs)):
         token_count = encoded['attention_mask'][idx].sum().item()
         first_few_tokens = tokenizer.convert_ids_to_tokens(encoded['input_ids'][idx][:8].tolist())
@@ -105,8 +108,8 @@ def run_step_by_step_demo(
             input_ids=encoded['input_ids'],
             attention_mask=encoded['attention_mask']
         )
-        token_embeddings = transformer_outputs.last_hidden_state  # [num_paras, seq_len, 768]
-        paragraph_embeddings = masked_mean_pooling(token_embeddings, encoded['attention_mask'])  # [num_paras, 768]
+        token_embeddings = transformer_outputs.last_hidden_state
+        paragraph_embeddings = masked_mean_pooling(token_embeddings, encoded['attention_mask'])
 
     print(f"Last Hidden States Shape     : {list(token_embeddings.shape)} ([num_paras, seq_len, 768])")
     print(f"Masked Mean Pooling Formula  : E_i = (Σ token_emb * mask) / (Σ mask)")
@@ -118,53 +121,63 @@ def run_step_by_step_demo(
         print(f"  • E{idx+1} ∈ ℝ⁷⁶⁸ : [{formatted_sample}, ...]")
 
     # =========================================================================
-    # STEP 4: STEP-BY-STEP SEQUENTIAL GRU MEMORY
+    # STEP 4: COGNITIVE OPERATION & MEMORY UPDATES (CCRM)
     # =========================================================================
-    print_banner("Sequential GRU Memory Updates", 4)
-    
-    # Load trained model checkpoint
-    print(f"Loading Trained Checkpoint: {checkpoint_path}...")
+    print_banner("Cognitive Operation (CCRM) & Sequential Memory Updates", 4)
+
+    print(f"Loading Trained Model C Checkpoint: {checkpoint_path}...")
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     config = checkpoint.get('config', {})
-    
-    model = ModelB_GRU(
+
+    model = ModelC_CCRM(
         embedding_dim=config.get('embedding_dim', 768),
         hidden_size=config.get('hidden_size', 256),
-        num_layers=config.get('num_layers', 1),
         mlp_hidden=config.get('mlp_hidden', 128),
-        dropout=config.get('dropout', 0.3)
+        cognitive_dropout=config.get('cognitive_dropout', 0.2),
+        classifier_dropout=config.get('classifier_dropout', 0.3)
     ).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
-    # We step through the GRU cell manually for each paragraph to display step-by-step memory
-    gru = model.gru
-    current_memory = torch.zeros(1, 1, 256, device=device)  # Initial empty memory M0
+    current_memory = torch.zeros(1, 256, device=device)  # M0 = 0
     print(f"Initial Memory State (M0)    : zeros(1, 256)")
     print("-" * 78)
 
     all_memories = []
     with torch.no_grad():
         for t in range(len(paragraphs)):
-            # Paragraph embedding input for step t: [1, 1, 768]
-            e_t = paragraph_embeddings[t:t+1].unsqueeze(1)
-            
-            # Forward one step through GRU: E_t + M_(t-1) -> M_t
-            gru_out, current_memory = gru(e_t, current_memory)
-            m_t = current_memory[-1, 0]  # [256]
-            all_memories.append(m_t)
-            
-            m_sample = m_t[:4].tolist()
-            formatted_m = ", ".join(f"{x:+.4f}" for x in m_sample)
-            print(f"  Step {t+1}: E{t+1} (768-D) + M{t} (256-D) ──► GRU ──► M{t+1} (256-D): [{formatted_m}, ...]")
+            e_t = paragraph_embeddings[t:t+1]  # [1, 768]
+
+            # Step-by-step introspection of Cognitive Operation
+            e_proj = model.cognitive_op.proj_e(e_t)          # [1, 256]
+            m_proj = model.cognitive_op.proj_m(current_memory) # [1, 256]
+            diff = e_proj - m_proj                            # [1, 256]
+            inter = e_proj * m_proj                           # [1, 256]
+            r_t = torch.cat([e_proj, m_proj, diff, inter], dim=-1) # [1, 1024]
+            c_t = model.cognitive_op.cognitive_mlp(r_t)       # [1, 256]
+            delta_e = model.cognitive_op.proj_c(c_t)          # [1, 768]
+            combined_input = e_t + delta_e                    # [1, 768]
+
+            # Recurrent GRU Cell update
+            current_memory = model.gru_cell(combined_input, current_memory) # [1, 256]
+            all_memories.append(current_memory[0])
+
+            c_sample = c_t[0][:3].tolist()
+            m_sample = current_memory[0][:3].tolist()
+            print(f"  Step {t+1}:")
+            print(f"    ├─ E_{t+1}' proj: [{e_proj[0,0]:+.3f}, ...]  |  M_{t}' proj: [{m_proj[0,0]:+.3f}, ...]")
+            print(f"    ├─ Relationship Ri [E', M', diff, inter] Shape: {list(r_t.shape)} (1024-D)")
+            print(f"    ├─ Cognitive Vector C_{t+1} (256-D): [{', '.join(f'{x:+.3f}' for x in c_sample)}, ...]")
+            print(f"    ├─ Modulated Input: E_{t+1} (768-D) + W_c(C_{t+1}) (768-D) ∈ ℝ⁷⁶⁸")
+            print(f"    └─ Updated Memory M_{t+1} (256-D): [{', '.join(f'{x:+.3f}' for x in m_sample)}, ...]\n")
 
     # =========================================================================
     # STEP 5: FINAL MEMORY VECTOR (Mn)
     # =========================================================================
     print_banner("Final Document Memory Vector (Mn)", 5)
     final_memory = all_memories[-1].unsqueeze(0)  # [1, 256]
-    print(f"Document Representation Shape : {list(final_memory.shape)} ([batch_size=1, hidden_size=256])")
-    print(f"Memory Vector Norm (L2)       : {final_memory.norm().item():.4f}")
+    print(f"Final Representation Shape    : {list(final_memory.shape)} ([batch_size=1, hidden_size=256])")
+    print(f"Final Memory Vector L2 Norm   : {final_memory.norm().item():.4f}")
     sample_mn = final_memory[0][:8].tolist()
     print(f"First 8 dimensions of Mn      : {[round(x, 4) for x in sample_mn]}")
 
@@ -172,31 +185,18 @@ def run_step_by_step_demo(
     # STEP 6: MLP CLASSIFICATION HEAD
     # =========================================================================
     print_banner("MLP Classification Head", 6)
-    
-    # Trace through each layer in MLP
-    linear1 = model.classifier[0]  # Linear(256 -> 128)
-    relu = model.classifier[1]     # ReLU
-    # Dropout is identity during eval
-    linear2 = model.classifier[3]  # Linear(128 -> 2)
-
     with torch.no_grad():
-        # Layer 1: Linear 256 -> 128
-        h1 = linear1(final_memory)
-        print(f"  1. Linear(256 ──► 128) Output Shape : {list(h1.shape)}")
-        print(f"     Sample H1 activations             : {[round(x, 4) for x in h1[0][:6].tolist()]}")
-        
-        # Layer 2: ReLU
-        h1_act = relu(h1)
-        print(f"  2. ReLU Activation Output Shape     : {list(h1_act.shape)}")
-        print(f"     Positive activations count        : {(h1_act > 0).sum().item()} / 128")
-        
-        # Layer 3: Linear 128 -> 2 (Logits)
-        logits = linear2(h1_act)
-        print(f"  3. Linear(128 ──► 2) Logits Shape   : {list(logits.shape)}")
-        print(f"     Raw Output Logits                 : [Human: {logits[0][0].item():+.4f}, AI: {logits[0][1].item():+.4f}]")
+        h1 = model.classifier[0](final_memory)  # Linear(256 -> 128)
+        h1_act = model.classifier[1](h1)        # ReLU
+        logits = model.classifier[3](h1_act)    # Linear(128 -> 2)
+
+    print(f"  1. Linear(256 ──► 128) Output Shape : {list(h1.shape)}")
+    print(f"  2. ReLU Activation Output Shape     : {list(h1_act.shape)}")
+    print(f"     Active positive neurons           : {(h1_act > 0).sum().item()} / 128")
+    print(f"  3. Linear(128 ──► 2) Output Logits  : [Human: {logits[0][0].item():+.4f}, AI: {logits[0][1].item():+.4f}]")
 
     # =========================================================================
-    # STEP 7: SOFTMAX & FINAL CLASSIFICATION
+    # STEP 7: SOFTMAX & FINAL DECISION
     # =========================================================================
     print_banner("Final Classification Decision", 7)
     with torch.no_grad():
@@ -206,7 +206,7 @@ def run_step_by_step_demo(
         predicted_class = torch.argmax(logits, dim=-1).item()
 
     pred_label = "AI-Generated" if predicted_class == 1 else "Human-Written"
-    
+
     print(f"Softmax Probabilities:")
     print(f"  • P(Human-Written) = {human_prob * 100:>6.2f}%")
     print(f"  • P(AI-Generated)  = {ai_prob * 100:>6.2f}%\n")
@@ -217,10 +217,10 @@ def run_step_by_step_demo(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Step-by-step Model B Pipeline Execution")
-    parser.add_argument("--file", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model/sample_essay.txt")
+    parser = argparse.ArgumentParser(description="Step-by-step Model C Pipeline Execution")
+    parser.add_argument("--file", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model C/sample_essay.txt")
     parser.add_argument("--text", type=str, default=None)
-    parser.add_argument("--checkpoint", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model/model_b_gru.pth")
+    parser.add_argument("--checkpoint", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model C/model_c_ccrm.pth")
     args = parser.parse_args()
 
     run_step_by_step_demo(
