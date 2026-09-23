@@ -16,7 +16,3 @@ env/
 data/*.csv
 data/*.jsonl
 data/*.pt
-
-# Large multi-experiment checkpoints (keep the best model weights: model_b_gru.pth)
-experiments_output/*.pth
-!experiments_output/B1_Baseline.pth
