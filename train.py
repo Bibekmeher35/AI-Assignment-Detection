@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 train.py
-Training engine for Model B: Memory-Only Baseline (DeBERTa-v3 -> Paragraph Embeddings -> GRU -> MLP -> Human/AI).
+Training engine for Model C: Cognitive Memory Module (CCRM)
+Pipeline: DeBERTa-v3 -> Paragraph Embeddings -> Cognitive Operation -> GRU -> MLP -> Human/AI.
 
 Includes:
-- Milestone 1: Verification with synthetic random embeddings.
+- Milestone 1: Verification with synthetic random embeddings for Model C.
 - End-to-end training loop with variable-length batch collation.
 - Evaluation metrics (Loss, Accuracy, Precision, Recall, F1, ROC-AUC).
-- Best checkpoint saving (model_b_gru.pth).
+- Best checkpoint saving (model_c_ccrm.pth).
 """
 
 import os
@@ -19,7 +20,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_auc_score
-from model import ModelB_GRU
+from model import ModelC_CCRM, ModelB_GRU
 
 
 class ParagraphEmbeddingDataset(Dataset):
@@ -87,11 +88,11 @@ def get_device() -> torch.device:
 
 def run_milestone_1_verification(device: torch.device):
     """
-    Milestone 1: Verify GRU -> MLP architecture with synthetic random embeddings.
+    Milestone 1: Verify Cognitive Operation + GRU + MLP architecture on synthetic data.
     """
-    print("\n" + "="*50)
-    print(">>> MILESTONE 1: VERIFYING GRU + MLP ON SYNTHETIC DATA")
-    print("="*50)
+    print("\n" + "="*60)
+    print(">>> MILESTONE 1: VERIFYING MODEL C (CCRM) ON SYNTHETIC DATA")
+    print("="*60)
 
     torch.manual_seed(42)
     batch_size = 8
@@ -99,19 +100,35 @@ def run_milestone_1_verification(device: torch.device):
     embedding_dim = 768
     hidden_size = 256
 
-    model = ModelB_GRU(embedding_dim=embedding_dim, hidden_size=hidden_size, num_layers=1, dropout=0.3).to(device)
+    model = ModelC_CCRM(
+        embedding_dim=embedding_dim,
+        hidden_size=hidden_size,
+        mlp_hidden=128,
+        cognitive_dropout=0.2,
+        classifier_dropout=0.3
+    ).to(device)
+
+    # Count parameters
+    cog_params = sum(p.numel() for p in model.cognitive_op.parameters())
+    gru_params = sum(p.numel() for p in model.gru_cell.parameters())
+    mlp_params = sum(p.numel() for p in model.classifier.parameters())
+    total_params = sum(p.numel() for p in model.parameters())
+
+    print(f"Model C Cognitive Operation Params : {cog_params:,} ({cog_params/1e6:.4f} M)")
+    print(f"Model C GRU Cell Params            : {gru_params:,} ({gru_params/1e6:.4f} M)")
+    print(f"Model C MLP Classifier Params      : {mlp_params:,} ({mlp_params/1e6:.4f} M)")
+    print(f"Model C Total Trainable Params     : {total_params:,} ({total_params/1e6:.4f} M)")
+
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     criterion = nn.CrossEntropyLoss()
 
-    # Create synthetic batch with variable paragraph lengths (e.g. 3 to 10 paragraphs)
     lengths = torch.tensor([3, 5, 8, 10, 4, 6, 7, 9], dtype=torch.long)
     mock_embeddings = torch.randn(batch_size, max_paras, embedding_dim, device=device)
     mock_labels = torch.tensor([0, 1, 1, 0, 1, 0, 1, 0], dtype=torch.long, device=device)
 
     model.train()
-    print(f"Input Shape: {mock_embeddings.shape}")
-    print(f"Lengths: {lengths.tolist()}")
-    print(f"Labels: {mock_labels.tolist()}")
+    print(f"\nSynthetic Input Shape: {list(mock_embeddings.shape)}")
+    print(f"Synthetic Paragraph Lengths: {lengths.tolist()}")
 
     initial_loss = None
     for step in range(15):
@@ -123,14 +140,14 @@ def run_milestone_1_verification(device: torch.device):
 
         if step == 0:
             initial_loss = loss.item()
-            print(f"Step 0 Initial Loss: {initial_loss:.4f} | Output Logits Shape: {logits.shape}")
+            print(f"Step 0 Initial Loss: {initial_loss:.4f} | Output Logits Shape: {list(logits.shape)}")
 
     final_loss = loss.item()
     print(f"Step 15 Final Loss: {final_loss:.4f}")
     assert logits.shape == (batch_size, 2), f"Expected logits shape (8, 2), got {logits.shape}"
     assert final_loss < initial_loss, f"Loss did not decrease: initial={initial_loss}, final={final_loss}"
-    print("[PASSED] Milestone 1 Verified: GRU forward pass, backpropagation, and loss reduction successful!")
-    print("="*50 + "\n")
+    print("[PASSED] Milestone 1 Verified: Model C forward pass, cognitive modulation, backpropagation, and loss reduction successful!")
+    print("="*60 + "\n")
 
 
 def evaluate(model, data_loader, criterion, device):
@@ -181,13 +198,14 @@ def evaluate(model, data_loader, criterion, device):
 def train_model(
     train_pt: str,
     val_pt: str,
-    save_path: str = "model_b_gru.pth",
+    save_path: str = "model_c_ccrm.pth",
+    model_type: str = "model_c",
     hidden_size: int = 256,
-    num_layers: int = 1,
     lr: float = 1e-3,
     weight_decay: float = 1e-4,
-    dropout: float = 0.3,
-    epochs: int = 15,
+    cognitive_dropout: float = 0.2,
+    classifier_dropout: float = 0.3,
+    epochs: int = 12,
     batch_size: int = 32,
     patience: int = 4
 ):
@@ -210,7 +228,6 @@ def train_model(
         collate_fn=collate_variable_sequences
     )
 
-    # Compute class weights for imbalanced classification if needed
     labels = train_dataset.labels.numpy()
     n_samples = len(labels)
     n_human = (labels == 0).sum()
@@ -222,13 +239,27 @@ def train_model(
 
     criterion = nn.CrossEntropyLoss(weight=class_weights)
 
-    model = ModelB_GRU(
-        embedding_dim=768,
-        hidden_size=hidden_size,
-        num_layers=num_layers,
-        mlp_hidden=128,
-        dropout=dropout
-    ).to(device)
+    if model_type == "model_c":
+        model = ModelC_CCRM(
+            embedding_dim=768,
+            hidden_size=hidden_size,
+            mlp_hidden=128,
+            cognitive_dropout=cognitive_dropout,
+            classifier_dropout=classifier_dropout
+        ).to(device)
+        model_name_str = "Model C (CCRM Cognitive Memory + GRU + MLP)"
+    else:
+        model = ModelB_GRU(
+            embedding_dim=768,
+            hidden_size=hidden_size,
+            num_layers=1,
+            mlp_hidden=128,
+            dropout=classifier_dropout
+        ).to(device)
+        model_name_str = "Model B (Baseline GRU Memory + MLP)"
+
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Instantiated {model_name_str} with {total_params:,} trainable parameters.")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=2)
@@ -239,7 +270,8 @@ def train_model(
     history = []
 
     print("\n" + "="*70)
-    print(f"Starting Training: Model B (GRU hidden={hidden_size}, layers={num_layers}, lr={lr})")
+    print(f"Starting Training: {model_name_str}")
+    print(f"Config: hidden_size={hidden_size}, lr={lr}, weight_decay={weight_decay}")
     print("="*70)
 
     for epoch in range(1, epochs + 1):
@@ -294,16 +326,16 @@ def train_model(
             best_val_f1 = val_metrics['f1']
             best_epoch = epoch
             patience_counter = 0
-            
-            # Save checkpoint
+
             checkpoint = {
                 'model_state_dict': model.state_dict(),
+                'model_type': model_type,
                 'config': {
                     'embedding_dim': 768,
                     'hidden_size': hidden_size,
-                    'num_layers': num_layers,
                     'mlp_hidden': 128,
-                    'dropout': dropout
+                    'cognitive_dropout': cognitive_dropout,
+                    'classifier_dropout': classifier_dropout
                 },
                 'val_metrics': val_metrics,
                 'epoch': epoch
@@ -316,7 +348,6 @@ def train_model(
                 print(f"\n[Early Stopping] No improvement for {patience} consecutive epochs. Best Epoch was {best_epoch} with Val F1: {best_val_f1:.4f}")
                 break
 
-    # Save training history
     hist_path = save_path.replace('.pth', '_history.json')
     with open(hist_path, 'w') as f:
         json.dump(history, f, indent=2)
@@ -326,12 +357,12 @@ def train_model(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train Model B: Memory-Only Baseline")
-    parser.add_argument("--train_pt", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model/data/train_embeddings.pt")
-    parser.add_argument("--val_pt", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model/data/val_embeddings.pt")
-    parser.add_argument("--save_path", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model/model_b_gru.pth")
+    parser = argparse.ArgumentParser(description="Train Model C: Cognitive Memory Module (CCRM)")
+    parser.add_argument("--train_pt", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model C/data/train_embeddings.pt")
+    parser.add_argument("--val_pt", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model C/data/val_embeddings.pt")
+    parser.add_argument("--save_path", type=str, default="/Users/bibekmeher/Documents/COLLEGE/4th Year/7th Sem/MAJOR/Model C/model_c_ccrm.pth")
+    parser.add_argument("--model_type", type=str, default="model_c", choices=["model_c", "model_b"])
     parser.add_argument("--hidden_size", type=int, default=256)
-    parser.add_argument("--num_layers", type=int, default=1)
     parser.add_argument("--epochs", type=int, default=12)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -346,8 +377,8 @@ if __name__ == "__main__":
             train_pt=args.train_pt,
             val_pt=args.val_pt,
             save_path=args.save_path,
+            model_type=args.model_type,
             hidden_size=args.hidden_size,
-            num_layers=args.num_layers,
             epochs=args.epochs,
             batch_size=args.batch_size,
             lr=args.lr
